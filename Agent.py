@@ -1,6 +1,8 @@
 import asyncio 
 from picoagents import Agent
 from picoagents.llm import OpenAIChatCompletionClient
+from picoagents.orchestration import RoundRobinOrchestrator
+from picoagents.termination import MaxMessageTermination , TextMentionTermination 
 import os
  
 client = OpenAIChatCompletionClient(
@@ -9,7 +11,7 @@ client = OpenAIChatCompletionClient(
 )
  
 poet = Agent(
-    name="Agent",
+    name="Poet Agent",
     description="Haiku poet",
     instructions="You are Haiku Poet.",
     model_client=client
@@ -21,19 +23,42 @@ async def test_poet():
     response = await poet.run("Write a haiku about cherry blossoms in spring") #Call the agent implementation
     print(f"Poet says: {response}")
     poetry= response
-asyncio.run(test_poet())
+# asyncio.run(test_poet())
 # asyncio.run_stream(test_poet())
 
 critic = Agent(
-    name="Agent",
-    description="Critic ",
-    instructions="Youre a critic analyzer who analyzes Haiku Poets to tell whether theyre nice or not",
+    name="Critic Agent",
+    description="Critic",
+    instructions="You are a haiku critic. \
+When you see a haiku, provide 2-3 specific, actionable \
+suggestions for improvement. . Be constructive and brief. \
+If satisfied with the haiku, respond with 'APPROVED'",
     model_client=client
 )
 
-async def critic_funt():
-    response = await critic.run(f"Provide feedback on this poet: ```{poetry}``` poet.")
-    print(f"The critic response is: {response}")
+# async def critic_funt():
+#     response = await critic.run(f"Provide feedback on this poet: ```{poetry}``` poet.")
+#     print(f"The critic response is: {response}")
 
-asyncio.run(critic_funt())
+# asyncio.run(critic_funt())
+
+"Creating the terminator."
+termination = ( MaxMessageTermination(max_messages=8000) | TextMentionTermination(text="APPROVED") )
+
+"Create the orchestrator"
+orchestrator = RoundRobinOrchestrator(
+    agents=[poet, critic],
+    termination=termination,
+    max_iterations = 100
+)
+
+# Running the two Agents
+async def run_orchestration():
+    task= "Write a haiku about an African single mom"
+    stream= orchestrator.run_stream(task)
+    async for message in stream:
+        print(f"{message}")
+
+asyncio.run(run_orchestration())
+
 
