@@ -3,6 +3,8 @@ from picoagents import Agent
 from picoagents.llm import OpenAIChatCompletionClient
 from picoagents.orchestration import RoundRobinOrchestrator
 from picoagents.termination import MaxMessageTermination , TextMentionTermination 
+from picoagents.webui import serve
+
 import os
  
 client = OpenAIChatCompletionClient(
@@ -49,7 +51,7 @@ termination = ( MaxMessageTermination(max_messages=8000) | TextMentionTerminatio
 orchestrator = RoundRobinOrchestrator(
     agents=[poet, critic],
     termination=termination,
-    max_iterations = 100
+    max_iterations = 10
 )
 
 # Running the two Agents
@@ -59,6 +61,7 @@ async def run_orchestration():
     async for message in stream:
         print(f"{message}")
 
-asyncio.run(run_orchestration())
+# asyncio.run(run_orchestration())
 
-
+# Use the orchestrator we created above
+serve(entities=[orchestrator], port=8070, auto_open=True)
